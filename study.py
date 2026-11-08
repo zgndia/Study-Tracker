@@ -1,180 +1,169 @@
-import sys
-import select
-import termios
-import tty
+"""Terminal-based Study Tracker."""
+
 import os
-import re
-import math
+from datetime import datetime, timedelta
 from pathlib import Path
-from datetime import datetime
-from colorama import Fore, Back, Style
 
-# --- CONFIGURATION ---
-EXAM_DATE = datetime(2026, 6, 20)
-LECTURE_BASE = 10
-QUESTION_BASE = 3.33
-MAX_MINUTES = 600
+from study_logic import MAX_MINUTES, PROGRESSION_DAYS, get_intensity, get_study_goals, format_time
 
-confirmationState = False
+try:
+    from colorama import Fore, Style, init
+    init(autoreset=True)
+except ImportError:
+    class _NoColor:
+        def __getattr__(self, _name):
+            return ""
+    Fore = Style = _NoColor()
 
-def get_key():
-    fd = sys.stdin.fileno()
-    old_settings = termios.tcgetattr(fd)
-    try:
-        tty.setraw(sys.stdin.fileno())
-        if select.select([sys.stdin], [], [], 0.1)[0]:
-            return sys.stdin.read(1)
-        return None
-    finally:
-        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
-def format_time(total_minutes):
-    hours = total_minutes // 60
-    minutes = total_minutes % 60
-    if hours == 0: return f"{minutes}m"
-    return f"{hours}h {minutes}m"
+# Set this to datetime(YEAR, MONTH, DAY) to enable an exam countdown.
+EXAM_DATE = None
 
-def get_study_goals(days_since_start):
-    intensity = 1 / (1 + math.exp(-0.3 * (days_since_start - 12))) 
-    scale_factor = intensity * 50 
+STATE_DIR = Path.home() / "Documents" / "Python" / "Studying"
+STATE_FILE = STATE_DIR / "streak_date.txt"
+ASCII_FILE = Path(__file__).with_name("ascii.txt")
 
-    if days_since_start == 1:
-        lec_time = 15
-        q_count = 5
-        q_time = 13
-    else:
-        lec_time = round(LECTURE_BASE * scale_factor)
-        q_count = round(QUESTION_BASE * scale_factor)
-        q_time = round(q_count * 2.5)
 
-    total = lec_time + q_time
+def clear_screen():
+    os.system("cls" if os.name == "nt" else "clear")
 
-    if total > MAX_MINUTES:
-        total = MAX_MINUTES
-        lec_time, q_time, q_count = 240, 360, 144
-        
-    return lec_time, q_count, q_time, total
-
-def draw_row(text, width):
-    # 1. Strip ANSI for calculation
-    ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-    plain_text = ansi_escape.sub('', text)
-    
-    # 2. Calculate how many spaces we actually need
-    visible_width = len(plain_text)
-    total_content_area = width - 4
-    
-    if visible_width > total_content_area:
-        # If text is too long, we clip it (rare, but prevents breaking the box)
-        text = text[:total_content_area]
-        visible_width = total_content_area
-
-    padding = " " * (total_content_area - visible_width)
-    
-    # 3. Print with a reset after the text to ensure no color bleeds into the padding
-    print(f"{Fore.CYAN}║ {Style.RESET_ALL}{text}{padding} {Fore.CYAN}║")
-
-def get_progress_bar(percent, width=20):
-    filled_len = int(width * percent // 100)
-    bar = "█" * filled_len + "░" * (width - filled_len)
-    return f"[{bar}] {percent}%"
-
-# --- DATA PERSISTENCE ---
-FILENAME = "streak_date.txt"
-FILEPATH = Path("~/Documents/Python/Studying").expanduser()
-ABSPATH = str(FILEPATH) + "/" + FILENAME
-
-ASCII_FILENAME = "ascii.txt"
-ASCII_PATH = str(FILEPATH) + "/" + ASCII_FILENAME
-ASCII = ""
-
-lines = 45 
 
 def load_ascii():
-    global ASCII
-    if os.path.exists(ASCII_PATH):
-        with open(ASCII_PATH, "r") as f:
-            ASCII = f.read()
+    try:
+        return ASCII_FILE.read_text(encoding="utf-8")
+    except OSError:
+        return ""
 
-def save_date(date_obj):
-    with open(ABSPATH, "w") as f:
-        f.write(date_obj.strftime("%Y-%m-%d"))
 
-def load_date():
-    if os.path.exists(ABSPATH):
-        with open(ABSPATH, "r") as f:
-            return datetime.strptime(f.read().strip(), "%Y-%m-%d")
-    else:
-        save_date(datetime.now())
-    return datetime.now()
+def load_start_date():
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    if STATE_FILE.exists():
+        try:
+            return datetime.strptime(STATE_FILE.read_text(encoding="utf-8").strip(), "%Y-%m-%d")
+        except (ValueError, OSError):
+            print("Saved progress could not be read; starting from today.")
+    start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    save_start_date(start)
+    return start
 
-def format_exam_countdown(days):
-    if days < 30:
-        return f"{days} days"
-    
-    months = days // 30
-    rem_days = days % 30
-    
-    if rem_days == 0:
-        return f"{months} month{'s' if months > 1 else ''}"
-    
-    return f"{months} month{'s' if months > 1 else ''}, {rem_days} day{'s' if rem_days > 1 else ''}"
 
-load_ascii()
-streak_date = load_date()
+def save_start_date(start_date):
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    STATE_FILE.write_text(start_date.strftime("%Y-%m-%d"), encoding="utf-8")
 
-while True:
-    os.system("clear")
+
+def get_progress_day(start_date, today=None):
+    today = today or datetime.now()
+    elapsed = (today.date() - start_date.date()).days
+    return max(1, min(PROGRESSION_DAYS, elapsed + 1))
+
+
+def format_exam_countdown(today):
+    if EXAM_DATE is None:
+        return "No exam date configured"
+    days = (EXAM_DATE.date() - today.date()).days
+    if days < 0:
+        return "Exam date has passed"
+    if days == 0:
+        return "Exam is today"
+    return f"{days} days until exam"
+
+
+def draw_progress_bar(percent, width=20):
+    percent = max(0, min(100, int(percent)))
+    filled = round(width * percent / 100)
+    return f"[{'█' * filled}{'░' * (width - filled)}] {percent}%"
+
+
+def show_dashboard(start_date):
     today = datetime.now()
-    
-    streak_days = max(1, (today - streak_date).days + 1)
-    days_until_exam = int((EXAM_DATE - today).days)
-    time_until_exam = format_exam_countdown(days_until_exam)
-    
-    lec, q_count, q_time, total = get_study_goals(streak_days)
-    intensity_val = round((total/MAX_MINUTES)*100)
+    day = get_progress_day(start_date, today)
+    lecture_minutes, question_count, question_minutes, total = get_study_goals(day)
+    intensity = get_intensity(day)
 
-    print(Fore.BLUE + ASCII + Style.RESET_ALL)
-    
-    print(Fore.CYAN + "╔" + "═"*(lines-2) + "╗")
-    draw_row(f"SYSTEM STATUS: {today.strftime('%b %d, %Y')}", lines)
-    print(Fore.CYAN + "╠" + "═"*(lines-2) + "╣")
-    
-    draw_row(f"Studying Streak: {streak_days} days", lines)
-    draw_row(f"{time_until_exam} left for the exam ({days_until_exam})", lines)
-    
-    print(Fore.CYAN + "╟" + "─"*(lines-2) + "╢")
-    
-    draw_row(f"TODAY'S GOAL", lines)
-    draw_row(f"Intensity: {get_progress_bar(intensity_val, 20)}", lines)
-    
-    print(Fore.CYAN + "╟" + "─"*(lines-2) + "╢")
-    
-    draw_row(f"• Lectures:  {format_time(lec)}", lines)
-    draw_row(f"• Questions: {q_count} questions ({format_time(q_time)})", lines)
-    draw_row(f"• Total:     {format_time(total)}", lines)
-    
-    print(Fore.CYAN + "╚" + "═"*(lines-2) + "╝" + Style.RESET_ALL)
+    clear_screen()
+    ascii_art = load_ascii()
+    if ascii_art:
+        print(Fore.BLUE + ascii_art + Style.RESET_ALL)
 
-    print(f"\n{Fore.WHITE}Options: {Fore.GREEN}[r]{Fore.WHITE} Reset streak | {Fore.RED}[q]{Fore.WHITE} Quit" + Style.RESET_ALL)
-    
+    width = 58
+    print(Fore.CYAN + "╔" + "═" * (width - 2) + "╗")
+    print(f"║ {'STUDY TRACKER':<{width - 4}} ║")
+    print(f"║ {'Date: ' + today.strftime('%b %d, %Y'):<{width - 4}} ║")
+    print("╠" + "═" * (width - 2) + "╣")
+    print(f"║ {'Progression day: ' + str(day) + ' / ' + str(PROGRESSION_DAYS):<{width - 4}} ║")
+    print(f"║ {'Exam: ' + format_exam_countdown(today):<{width - 4}} ║")
+    print("╟" + "─" * (width - 2) + "╢")
+    print(f"║ {'TODAY’S STUDY GOAL':<{width - 4}} ║")
+    print(f"║ {'Intensity: ' + draw_progress_bar(intensity):<{width - 4}} ║")
+    print("╟" + "─" * (width - 2) + "╢")
+    print(f"║ {'Lectures:  ' + format_time(lecture_minutes):<{width - 4}} ║")
+    print(f"║ {'Questions: ' + str(question_count) + ' (' + format_time(question_minutes) + ')':<{width - 4}} ║")
+    print(f"║ {'Total:     ' + format_time(total):<{width - 4}} ║")
+    print("╚" + "═" * (width - 2) + "╝")
+    print()
+    print(f"{Fore.GREEN}[b]{Style.RESET_ALL} Go back one day  "
+          f"{Fore.YELLOW}[r]{Style.RESET_ALL} Reset progress  "
+          f"{Fore.RED}[q]{Style.RESET_ALL} Quit")
+    print("Going back one day lowers the progression target by one day; it does not erase study history.")
+
+
+def rollback_one_day(start_date):
+    current_day = get_progress_day(start_date)
+    if current_day <= 1:
+        print("You're already on day 1. Progress cannot go back any further.")
+        input("Press Enter to continue...")
+        return start_date
+
+    answer = input(
+        f"Move from day {current_day} back to day {current_day - 1}? [y/N]: "
+    ).strip().lower()
+    if answer not in {"y", "yes"}:
+        print("Progress unchanged.")
+        input("Press Enter to continue...")
+        return start_date
+
+    # Moving the start date forward by one day makes the derived progression day
+    # decrease by one. This persists across restarts and can be repeated.
+    updated_start = start_date + timedelta(days=1)
+    save_start_date(updated_start)
+    print(f"Progress moved back to day {current_day - 1}.")
+    input("Press Enter to continue...")
+    return updated_start
+
+
+def reset_progress():
+    answer = input("Reset your progression to day 1? This changes the saved start date. [y/N]: ").strip().lower()
+    if answer in {"y", "yes"}:
+        new_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        save_start_date(new_start)
+        print("Progress reset to day 1.")
+        input("Press Enter to continue...")
+        return new_start
+    print("Reset cancelled.")
+    input("Press Enter to continue...")
+    return None
+
+
+def main():
+    start_date = load_start_date()
     while True:
-        key = get_key()
+        show_dashboard(start_date)
+        choice = input("\nSelect an option: ").strip().lower()
 
-        if key == "y" and confirmationState:
-            confirmationState = False
-            streak_date = datetime.now()
-            save_date(streak_date)
+        if choice in {"q", "quit", "exit"}:
+            print("Study Tracker closed.")
             break
-        elif key == "n" and confirmationState:
-            confirmationState = False
-            break
+        if choice in {"b", "back"}:
+            start_date = rollback_one_day(start_date)
+        elif choice in {"r", "reset"}:
+            updated = reset_progress()
+            if updated is not None:
+                start_date = updated
+        else:
+            print("Unknown option. Choose b, r, or q.")
+            input("Press Enter to continue...")
 
-        if key == 'q' and not confirmationState:
-            os.system("clear")
-            print(Style.RESET_ALL + """> Closed, use the "today" command to view todays program again.""")
-            quit()
-        elif key == 'r' and not confirmationState:
-            confirmationState = True
-            os.system("clear")
-            print(f"{Fore.BLUE}> {Fore.LIGHTRED_EX}Are you sure you want to reset your streak? {Fore.GREEN}[y]{Fore.CYAN}/{Fore.RED}[n]" + Style.RESET_ALL)
+
+if __name__ == "__main__":
+    main()
