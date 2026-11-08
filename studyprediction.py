@@ -1,63 +1,37 @@
-import math, os
+"""Interactive study-goal forecaster using the same curve as Study Tracker."""
 
-# --- CONFIGURATION ---
-LECTURE_BASE = 10
-QUESTION_BASE = 3.33
-MAX_MINUTES = 600
+from study_logic import PROGRESSION_DAYS, get_intensity, get_study_goals, format_time
 
-# --- THE ENGINE (Lambda) ---
-# Returns: (lec_min, q_count, q_min, total_min)
-calc_study = lambda d: (
-    (15, 5, 13, 28) if d == 1 else (
-        lambda scale: (
-            lambda l, q, qt: (240, 144, 360, 600) if (l + qt) > MAX_MINUTES else (l, q, qt, l + qt)
-        )(round(LECTURE_BASE * scale), round(QUESTION_BASE * scale), round(round(QUESTION_BASE * scale) * 2.5))
-    )(50 / (1 + math.exp(-0.3 * (d - 12))))
-)
-
-aliases = ["q","quit","exit"]
-
-def format_time(total_minutes):
-    hours = total_minutes // 60
-    minutes = total_minutes % 60
-    return f"{hours}h {minutes}m" if hours > 0 else f"{minutes}m"
-
-def frontpage():
-    print("--- STUDY GOAL FORECASTER ---")
-    print("Enter a day number to see the projected workload.")
-    print("Type 'q' to close.\n")
 
 def main():
-    os.system("clear")
-    frontpage()
+    print("--- STUDY GOAL FORECASTER ---")
+    print(f"Progression reaches its 6-hour maximum on day {PROGRESSION_DAYS}.")
+    print("Enter a day number from 1 to 60. Type 'q' to close.\n")
 
     while True:
-        user_input = input("Target Day > ").lower()
-        
-        if user_input.isalpha() and any(user_input.lower() == alias for alias in aliases):
-            os.system("clear")
+        value = input("Target Day > ").strip().lower()
+        if value in {"q", "quit", "exit"}:
+            print("Forecaster closed.")
             break
-            
-        try:
-            day = int(user_input)
-            if day < 1:
-                print("Please enter a day greater than 0.")
-                continue
-                
-            lec, q_cnt, q_tm, total = calc_study(day)
 
-            os.system("clear")
-            frontpage()
-            
-            print(f"\n[ RESULTS FOR DAY {day} ]")
-            print(f"Status:    (Intensity: {round((total/MAX_MINUTES)*100)}%)")
-            print(f"Lectures:  {format_time(lec)}")
-            print(f"Questions: {q_cnt} questions ({format_time(q_tm)})")
-            print(f"Total:     {format_time(total)}")
-            print("-" * 25 + "\n")
-            
+        try:
+            day = int(value)
         except ValueError:
-            print("Invalid input. Please enter a number.")
+            print("Invalid input. Please enter a whole number.")
+            continue
+
+        if not 1 <= day <= PROGRESSION_DAYS:
+            print(f"Please enter a day between 1 and {PROGRESSION_DAYS}.")
+            continue
+
+        lecture_minutes, question_count, question_minutes, total = get_study_goals(day)
+        print(f"\n[ RESULTS FOR DAY {day} ]")
+        print(f"Intensity: {get_intensity(day)}%")
+        print(f"Lectures:  {format_time(lecture_minutes)}")
+        print(f"Questions: {question_count} questions ({format_time(question_minutes)})")
+        print(f"Total:     {format_time(total)}")
+        print("-" * 30 + "\n")
+
 
 if __name__ == "__main__":
     main()
