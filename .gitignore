@@ -1,3 +1,6 @@
-streak_date.txt
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/

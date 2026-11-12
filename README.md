@@ -1,22 +1,61 @@
-# Study Tracker
+# stdt — Study Tracker
 
-A terminal-based study tracker with a gradual 60-day study-goal progression.
+A lightweight, installable terminal study tracker. It preserves the original 60-day normalized logistic progression and stores progress in a per-user JSON file.
 
 ## Requirements
 
 - Python 3.10 or newer
-- No required third-party packages (colors are optional; install with `python -m pip install colorama`)
+- No required third-party dependencies
+- Optional colors: `py -m pip install "stdt[color]"`
 
-## Run
+## Install on Windows
 
-```bash
-python study.py
+Extract the project, open a terminal in its folder, and run:
+
+```powershell
+py -m pip install --user .
 ```
 
-Forecast a specific day:
+This installs the `stdt` command into your user Python Scripts directory. To make it callable from any terminal location, ensure that directory is on your Windows PATH. You can find your user base with `py -m site --user-base`; the Scripts directory is the `Scripts` folder inside that location. Add that full path to your user PATH once, then reopen your terminal.
 
-```bash
-python studyprediction.py
+For development, use `py -m pip install --user -e .` instead.
+
+## Commands
+
+```text
+stdt              Open the interactive main menu
+stdt -b            Go back one progression day
+stdt --back        Same as -b
+stdt -r            Reset progression to day 1
+stdt --reset       Same as -r
+stdt --version     Print installed version
+stdt --help        Show command help
+stdt-predict       Open the original study-goal forecaster
+```
+
+Both `--back` and `--reset` ask for confirmation with `[Y/n]`. Press **Enter** or type `y` to confirm; type `n` to cancel. Yes is the default. The interactive menu also supports `b`, `r`, and `q`.
+
+## Data location
+
+On Windows, progress is stored at `%APPDATA%\\stdt\\progress.json` (typically `C:\\Users\\<you>\\AppData\\Roaming\\stdt\\progress.json`). On macOS it is stored in `~/Library/Application Support/stdt/progress.json`. On Linux it uses `$XDG_DATA_HOME/stdt/progress.json`, falling back to `~/.local/share/stdt/progress.json`.
+
+Example JSON:
+
+```json
+{
+    "start_date": "2026-11-12"
+}
+```
+
+## Import from Python
+
+```python
+import stdt
+
+print(stdt.get_daily_target(10))
+print(stdt.get_study_goals(10))
+print(stdt.get_data_file())
+print(stdt.load_start_date())
 ```
 
 ## Progression
@@ -25,13 +64,3 @@ python studyprediction.py
 - The daily target follows a normalized logistic curve.
 - Day 60 reaches the 360-minute (6-hour) ceiling.
 - Intensity is the daily target divided by 360 minutes.
-
-## Progress controls
-
-- `b`: Move progression back by one day. Confirm with `y` to lower the target for the current day. This can be repeated, but never moves earlier than day 1.
-- `r`: Reset progression to day 1.
-- `q`: Quit.
-
-Progress is saved in `~/Documents/Python/Studying/streak_date.txt` (the folder is created automatically). The `ascii.txt` file is loaded from the project folder.
-
-The exam countdown is disabled by default because the original repository's hardcoded exam date had already passed. Set `EXAM_DATE` in `study.py` to a future `datetime(YEAR, MONTH, DAY)` to enable it.

@@ -1,5 +1,4 @@
-"""Shared study-goal progression logic for Study Tracker."""
-
+"""Study-goal progression calculations."""
 import math
 
 PROGRESSION_DAYS = 60
@@ -18,17 +17,12 @@ _END_CURVE = _logistic(PROGRESSION_DAYS)
 
 
 def get_daily_target(day: int) -> int:
-    """Return the target study minutes for a progression day (1..60).
-
-    A normalized logistic curve starts at 28 minutes and reaches exactly
-    360 minutes on day 60. Values outside the range are safely clamped.
-    """
+    """Return the target study minutes for a progression day (1..60)."""
     day = max(1, min(int(day), PROGRESSION_DAYS))
     if day == 1:
         return START_MINUTES
     if day == PROGRESSION_DAYS:
         return MAX_MINUTES
-
     progress = (_logistic(day) - _START_CURVE) / (_END_CURVE - _START_CURVE)
     target = START_MINUTES + progress * (MAX_MINUTES - START_MINUTES)
     return max(START_MINUTES, min(MAX_MINUTES, round(target)))
@@ -37,11 +31,8 @@ def get_daily_target(day: int) -> int:
 def get_study_goals(day: int) -> tuple[int, int, int, int]:
     """Return (lecture_minutes, question_count, question_minutes, total)."""
     total = get_daily_target(day)
-
     if day <= 1:
         return 15, 5, 13, 28
-
-    # Preserve approximately the original lecture/question time split.
     question_minutes = round(total * (8.325 / 18.325))
     lecture_minutes = total - question_minutes
     question_count = round(question_minutes / 2.5)
@@ -49,7 +40,7 @@ def get_study_goals(day: int) -> tuple[int, int, int, int]:
 
 
 def get_intensity(day: int) -> int:
-    """Percentage of the six-hour daily ceiling."""
+    """Return the daily target as a percentage of the six-hour ceiling."""
     return round(get_daily_target(day) / MAX_MINUTES * 100)
 
 
