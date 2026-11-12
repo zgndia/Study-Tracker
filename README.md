@@ -1,14 +1,51 @@
-# stdt — Study Tracker
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) ![Built with](https://img.shields.io/badge/built_with-Python-green)
 
-A lightweight, installable terminal study tracker. It preserves the original 60-day normalized logistic progression and stores progress in a per-user JSON file.
+# Study Tracker (stdt)
+
+A lightweight, installable terminal study tracker to track your study sesions. Stores progress in a per-user JSON file.
+
+## Table of Contents
+
+- [Features](#features)
+- [Usage](#usage)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Import Library](#import-library)
+- [Tech Stack](#tech-stack)
+- [License](#license)
+
+## Features
+
+![Matplotlib graph of study tracker](./assets/graph.png)
+
+- Study Tracker aims to help you build a habit to study every day for 6 hours consistently in 2 months.
+- Study time starts from 30~ minutes and uses a logistic growth rate of 0.06 up to 6 hours.
+- You will be given two daily tasks of the following:
+1. Listen to a lecture for x hours/minutes. The duration is flexible, so find a lecture similar to the duration and watch through all of it. Always consider taking breaks.
+2. Solve x questions preferably about the lecture you've listened to.
+
+- You have the ability to go back one day if you've failed to do any meaningful studies for that day.
+- You can reset the progression if you feel like you've been burning out.
+
+## Usage
+
+- You can use Study Tracker by running these commands from your terminal after installation.
+
+```text
+stdt               Open the interactive main menu
+stdt -b / --back   Go back one progression day
+stdt -r / --reset  Reset progression to day 1
+stdt --version     Print installed version
+stdt --help        Show command help
+stdt-predict       Open the original study-goal forecaster
+```
 
 ## Requirements
 
 - Python 3.10 or newer
-- No required third-party dependencies
 - Optional colors: `py -m pip install "stdt[color]"`
 
-## Install on Windows
+## Installation
 
 Extract the project, open a terminal in its folder, and run:
 
@@ -20,34 +57,7 @@ This installs the `stdt` command into your user Python Scripts directory. To mak
 
 For development, use `py -m pip install --user -e .` instead.
 
-## Commands
-
-```text
-stdt              Open the interactive main menu
-stdt -b            Go back one progression day
-stdt --back        Same as -b
-stdt -r            Reset progression to day 1
-stdt --reset       Same as -r
-stdt --version     Print installed version
-stdt --help        Show command help
-stdt-predict       Open the original study-goal forecaster
-```
-
-Both `--back` and `--reset` ask for confirmation with `[Y/n]`. Press **Enter** or type `y` to confirm; type `n` to cancel. Yes is the default. The interactive menu also supports `b`, `r`, and `q`.
-
-## Data location
-
-On Windows, progress is stored at `%APPDATA%\\stdt\\progress.json` (typically `C:\\Users\\<you>\\AppData\\Roaming\\stdt\\progress.json`). On macOS it is stored in `~/Library/Application Support/stdt/progress.json`. On Linux it uses `$XDG_DATA_HOME/stdt/progress.json`, falling back to `~/.local/share/stdt/progress.json`.
-
-Example JSON:
-
-```json
-{
-    "start_date": "2026-11-12"
-}
-```
-
-## Import from Python
+## Import Library
 
 ```python
 import stdt
@@ -58,9 +68,14 @@ print(stdt.get_data_file())
 print(stdt.load_start_date())
 ```
 
-## Progression
+## Tech Stack
 
-- Day 1 starts at 28 minutes.
-- The daily target follows a normalized logistic curve.
-- Day 60 reaches the 360-minute (6-hour) ceiling.
-- Intensity is the daily target divided by 360 minutes.
+- **Python**
+
+## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
+---
+
+Built by **zgndia**
