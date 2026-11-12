@@ -21,8 +21,11 @@ A lightweight, installable terminal study tracker to track your study sesions. S
 - Study Tracker aims to help you build a habit to study every day for 6 hours consistently in 2 months.
 - Study time starts from 30~ minutes and uses a logistic growth rate of 0.06 up to 6 hours.
 - You will be given two daily tasks of the following:
-1. Listen to a lecture for x hours/minutes. The duration is flexible, so find a lecture similar to the duration and watch through all of it. Always consider taking breaks.
-2. Solve x questions preferably about the lecture you've listened to.
+
+```text
+1. Listen to a lecture for x hours/minutes, the duration is flexible.
+2. Solve x questions, preferably about the lecture you've listened to.
+```
 
 - You have the ability to go back one day if you've failed to do any meaningful studies for that day.
 - You can reset the progression if you feel like you've been burning out.
