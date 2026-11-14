@@ -19,7 +19,7 @@ A lightweight, installable terminal study tracker to track your study sesions. S
 ![Matplotlib graph of study tracker](./assets/graph.png)
 
 - Study Tracker aims to help you build a habit to study every day for 6 hours consistently in 2 months.
-- Study time starts from 30~ minutes and uses a logistic growth rate of 0.06 up to 6 hours.
+- Study time starts from 30~ minutes and uses a logistic growth rate of 0.06 (6% growth) up to 6 hours.
 - You will be given two daily tasks of the following:
 
 ```text
