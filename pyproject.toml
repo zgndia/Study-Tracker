@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "stdt"
 version = "1.0.0"
-description = "A terminal-based study tracker with a gradual 60-day study-goal progression"
+description = "A terminal-based study tracker with configurable compound study-goal progression"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {file = "LICENSE"}
@@ -15,6 +15,7 @@ dependencies = []
 
 [project.optional-dependencies]
 color = ["colorama>=0.4.6"]
+graph = ["matplotlib>=3.8"]
 
 [project.scripts]
 stdt = "stdt.cli:main"
